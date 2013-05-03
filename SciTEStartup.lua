@@ -7,6 +7,7 @@ AUTOCOMPLETE_START_POS = 0
 AUTOCOMPLETE_RESULTS = {}
 
 AUTOCOMPLETE_MENU_COLUMN_WIDTH = 30
+AUTOCOMPLETE_PREFIX = ""
 
 function OnKey(c, shift, ctrl, alt)
 	if (editor.Lexer == 3) then  -- c++
@@ -34,7 +35,7 @@ function OnKey(c, shift, ctrl, alt)
 				currentFilePath = currentFilePath .. "Untitled.cpp"
 			end
 
-			AUTOCOMPLETE_RESULTS = clangcomplete.complete(currentFilePath, editor.CurrentPos, tostring(editor:GetText()), compilerOptions)
+			AUTOCOMPLETE_RESULTS, AUTOCOMPLETE_PREFIX = clangcomplete.completeSymbol(currentFilePath, editor.CurrentPos, tostring(editor:GetText()), compilerOptions)
 
 			local suggestions = {}
 			local replacement
@@ -52,7 +53,7 @@ function OnKey(c, shift, ctrl, alt)
 				-- format the list into 2 columns, try to make the first one fixed length so it looks nice with monospace font
 				fillerLen = AUTOCOMPLETE_MENU_COLUMN_WIDTH - #replacement
 				if fillerLen < 0 then fillerLen = 0 end
-				table.insert(suggestions, replacement .. string.rep(" ", fillerLen) .. " " .. table.concat(description))
+				table.insert(suggestions, replacement .. string.rep(" ", fillerLen) .. " " .. table.concat(description, " "))
 			end
 			-- unfortunately, this needs to be sorted and the order is case sensitive or else the user list will not work properly when the user enters additional characters
 			-- libclang only sorts the results in case insensitive way, so this either has to be done in C or inside Lua script
@@ -76,8 +77,13 @@ end
 
 function OnUserListSelection(t,str)
   if t == AUTOCOMPLETE_MENU_ID then 
+		local prefixLen = 1
+		if AUTOCOMPLETE_PREFIX ~= nil then
+			prefixLen = #AUTOCOMPLETE_PREFIX + 1
+		end
 		editor:SetSel(AUTOCOMPLETE_START_POS, editor.CurrentPos)
-		editor:ReplaceSel(string.sub(str, 1, string.find(str, " ") - 1))
+		replacement = string.sub(str, 1, string.find(str, " ") - 1)
+		editor:ReplaceSel(string.sub(replacement, prefixLen, -1))
      return true
   else
      return false
